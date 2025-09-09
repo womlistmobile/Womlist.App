@@ -1,123 +1,88 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { NavigationContainer } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
-import { QrProvider } from './screens/DashBoard/QrContext';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import { View, ActivityIndicator } from 'react-native';
 
-import HomeScreen from './screens/DashBoard/HomeScreen';
-import LoadingScreen from './screens/DashBoard/LoadingScreen';
-import UserSelectScreen from './screens/DashBoard/UserSelectScreen';
-import LoginScreen from './screens/DashBoard/LoginScreen';
-import DashboardScreen from './screens/DashBoard/DashBoardScreen';
-import MainMenuScreen from './screens/MainMenu/MainMenuScreen';
-import ProductInfoScreen from './screens/MainMenu/UrunBilgisi/ProductInfoScreen';
-import LotInfoScreen from './screens/MainMenu/UrunBilgisi/LotInfoScreen';
-import AddressInfoScreen from './screens/MainMenu/UrunBilgisi/AddressInfoScreen';
-import AddressLotInfoScreen from './screens/MainMenu/UrunBilgisi/AddressLotInfoScreen';
-import LotSorgulaScreen from './screens/MainMenu/LotBilgisi/LotSorgulaScreen';
-import AdresDetayScreen from './screens/MainMenu/AdresBilgisi/AdresDetayScreen';
-import FastTransferDepoScreen from './screens/MainMenu/HizliTransfer/FastTransferDepoScreen';
-import FastTransferUrunScreen from './screens/MainMenu/HizliTransfer/FastTransferUrunScreen';
-import FastTransferMiktarScreen from './screens/MainMenu/HizliTransfer/FastTransferMiktarScreen';
-import SabitFisScreen from './screens/MainMenu/SabitFis/SabitFisScreen';
-import SiparisScreen from './screens/MainMenu/SabitFis/Siparis/SiparisScreen';
-import DepoScreen from './screens/MainMenu/SabitFis/Depo/SabitFisDepoScreen';
-import SabitFisDetayScreen from './screens/MainMenu/SabitFis/Siparis/SabitFisDetayScreen';
-import EkBilgilerScreen from './screens/MainMenu/SabitFis/Siparis/EkBilgilerScreen';
-import SabitFisDepoScreen from './screens/MainMenu/SabitFis/Depo/SabitFisDepoScreen';
-import DepoDetayScreen from './screens/MainMenu/SabitFis/Depo/DepoDetayScreen';
-import DepoEkBilgilerScreen from './screens/MainMenu/SabitFis/Depo/DepoEkBilgilerScreen';
-import IadeDetayScreen from './screens/MainMenu/SabitFis/Iade/IadeDetayScreen';
-import IadeEkBilgilerScreen from './screens/MainMenu/SabitFis/Iade/IadeEkBilgilerScreen';
-import IadeScreen from './screens/MainMenu/SabitFis/Iade/IadeScreen';
-import ZayiScreen from './screens/MainMenu/SabitFis/Zayi/ZayiScreen';
-import ZayiDetayScreen from './screens/MainMenu/SabitFis/Zayi/ZayiDetayScreen';
-import ZayiEkBilgilerScreen from './screens/MainMenu/SabitFis/Zayi/ZayiEkBilgilerScreen';
-import SarfScreen from './screens/MainMenu/SabitFis/Sarf/SarfScreen';
-import SarfEkBilgilerScreen from './screens/MainMenu/SabitFis/Sarf/SarfEkBilgilerScreen';
-import SarfDetayScreen from './screens/MainMenu/SabitFis/Sarf/SarfDetayScreen';
-import UretimScreen from './screens/MainMenu/SabitFis/Uretim/UretimScreen';
-import UretimEkBilgilerScreen from './screens/MainMenu/SabitFis/Uretim/UretimEkBilgilerScreen';
-import UretimDetayScreen from './screens/MainMenu/SabitFis/Uretim/UretimDetayScreen';
-import FasonScreen from './screens/MainMenu/SabitFis/Fason/FasonScreen';
-import FasonDetayScreen from './screens/MainMenu/SabitFis/Fason/FasonDetayScreen';
-import FasonEkBilgilerScreen from './screens/MainMenu/SabitFis/Fason/FasonEkBilgiler';
-import DepoSayimScreen from './screens/MainMenu/DepoSayim/DepoSayimScreen';
-import DepoSayimAramaScreen from './screens/MainMenu/DepoSayim/DepoSayimAramaScreen';
-import DepoSayimDetayScreen from './screens/MainMenu/DepoSayim/DepoSayimDetayScreen';
-import AdresTransferBarcodeScreen from './screens/MainMenu/AdreslerArasiTransfer/AdresTransferBarcodeScreen';
-import AdresSecScreen from './screens/MainMenu/AdreslerArasiTransfer/AdresSecScreen';
-import MiktarGirScreen from './screens/MainMenu/AdreslerArasiTransfer/MiktarGirScreen';
-import AdresOkutScreen from './screens/MainMenu/AdreslerArasiTransfer/AdresOkutScreen';
-import QrScanner from './screens/DashBoard/QrScanner';
-import PaketListesiScreen from './screens/MainMenu/Paketleme/PaketListesiScreen';
-import KonsinyeScreen from './screens/KonsinyeScreen';
-import RezervScreen from './screens/RezervScreen';
+import LoginScreen from './screens/LoginScreen';
+import CustomerRegisterScreen from './screens/CustomerRegisterScreen';
+import ServiceProviderRegisterScreen from './screens/ServiceProviderRegisterScreen';
+import HomeScreen from './screens/HomeScreen';
+import MyAppointmentsScreen from './screens/MyAppointmentsScreen';
+import BusinessDetailScreen from './screens/BusinessDetailScreen';
+import AppointmentScreen from './screens/AppointmentScreen';
+import ServiceProviderDashboardScreen from './screens/ServiceProviderDashboardScreen';
+import ServicesScreen from './screens/ServicesScreen';
+import StaffScreen from './screens/StaffScreeen';
+import ProfessionSelectScreen from './screens/ProfessionSelectScreen';
+import BusinessHoursScreen from './screens/BusinessHoursScreen';
+import ReviewsListScreen from './screens/ReviewsListScreen';
+import WriteReviewScreen from './screens/WriteReviewScreen';
+import StaffHoursScreen from './screens/StaffHoursScreen';
 
-const Stack = createNativeStackNavigator();
+export type RootStackParamList = {
+  Login: undefined;
+  CustomerRegister: undefined;
+  ServiceProviderRegister: undefined;
+  Home: undefined;
+  MyAppointments: undefined;
+  BusinessDetail: { business: any };
+  Appointment: { provider: any };
+  ServiceProviderDashboard: undefined;
+  Services: undefined;
+  Staff: undefined;
+  ProfessionSelect: undefined;
+  BusinessHours: undefined;
+  ReviewsList: undefined;
+  WriteReview: undefined;
+  StaffHours: undefined;
+};
+
+const Stack = createNativeStackNavigator<RootStackParamList>();
 
 export default function App() {
-  return (
-    <QrProvider>
-      <NavigationContainer>
-        <Stack.Navigator
-          screenOptions={{
-            headerShown: true,
-            headerTitleAlign: 'center',
-            headerStyle: { backgroundColor: '#ea5a21' },
-            headerTintColor: '#fff',
-          }}>
+  const [loading, setLoading] = useState(true);
+  const [isLoggedIn, setIsLoggedIn] = useState(false);
 
-          <Stack.Screen name="Home" component={HomeScreen} options={{ headerShown: false }} />
-          <Stack.Screen name="Loading" component={LoadingScreen} options={{ title: 'Yükleniyor' }} />
-          <Stack.Screen name="UserSelect" component={UserSelectScreen} options={{ title: 'Kullanıcı Seçimi' }} />
-          <Stack.Screen name="Login" component={LoginScreen} options={{ title: 'Giriş Yap' }} />
-          <Stack.Screen name="Dashboard" component={DashboardScreen} options={{ title: 'Kontrol Paneli' }} />
-          <Stack.Screen name="MainMenu" component={MainMenuScreen} options={{ title: 'Ana Menü' }} />
-          <Stack.Screen name="ProductInfo" component={ProductInfoScreen} options={{ title: 'Ürün Bilgisi' }} />
-          <Stack.Screen name="LotInfo" component={LotInfoScreen} options={{ title: 'Lot Bilgisi' }} />
-          <Stack.Screen name="AddressInfo" component={AddressInfoScreen} options={{ title: 'Adres Bilgisi' }} />
-          <Stack.Screen name="AddressLotInfo" component={AddressLotInfoScreen} options={{ title: 'Adres/Lot Detay' }} />
-          <Stack.Screen name="LotSorgula" component={LotSorgulaScreen} options={{ title: 'Lot Sorgula' }} />
-          <Stack.Screen name="AdresDetay" component={AdresDetayScreen} options={{ title: 'Adres Detay' }} />
-          <Stack.Screen name="FastTransferDepo" component={FastTransferDepoScreen} options={{ title: 'Hızlı Transfer - Depo' }} />
-          <Stack.Screen name="FastTransferUrun" component={FastTransferUrunScreen} options={{ title: 'Hızlı Transfer - Ürün' }} />
-          <Stack.Screen name="FastTransferMiktar" component={FastTransferMiktarScreen} options={{ title: 'Hızlı Transfer - Miktar' }} />
-          <Stack.Screen name="SabitFis" component={SabitFisScreen} options={{ title: 'Sabit Fiş' }} />
-          <Stack.Screen name="Siparis" component={SiparisScreen} options={{ title: 'Sipariş Fişi' }} />
-          <Stack.Screen name="Depo" component={DepoScreen} options={{ title: 'Depo Fişi' }} />
-          <Stack.Screen name="SabitFisDetay" component={SabitFisDetayScreen} options={{ title: 'Sipariş Detayı' }} />
-          <Stack.Screen name="EkBilgiler" component={EkBilgilerScreen} options={{ title: 'Ek Bilgiler' }} />
-          <Stack.Screen name="SabitFisDepo" component={SabitFisDepoScreen} options={{ title: 'Depo Girişi' }} />
-          <Stack.Screen name="DepoDetay" component={DepoDetayScreen} options={{ title: 'Depo Detayı' }} />
-          <Stack.Screen name="DepoEkBilgiler" component={DepoEkBilgilerScreen} options={{ title: 'Depo Ek Bilgiler' }} />
-          <Stack.Screen name="Iade" component={IadeScreen} options={{ title: 'İade Fişi' }} />
-          <Stack.Screen name="IadeDetay" component={IadeDetayScreen} options={{ title: 'İade Detayı' }} />
-          <Stack.Screen name="IadeEkBilgiler" component={IadeEkBilgilerScreen} options={{ title: 'İade Ek Bilgiler' }} />
-          <Stack.Screen name="Zayi" component={ZayiScreen} options={{ title: 'Zayi Fişi' }} />
-          <Stack.Screen name="ZayiDetay" component={ZayiDetayScreen} options={{ title: 'Zayi Detayı' }} />
-          <Stack.Screen name="ZayiEkBilgiler" component={ZayiEkBilgilerScreen} options={{ title: 'Zayi Ek Bilgiler' }} />
-          <Stack.Screen name="Sarf" component={SarfScreen} options={{ title: 'Sarf Fişi' }} />
-          <Stack.Screen name="SarfEkBilgiler" component={SarfEkBilgilerScreen} options={{ title: 'Sarf Ek Bilgiler' }} />
-          <Stack.Screen name="SarfDetay" component={SarfDetayScreen} options={{ title: 'Sarf Detayı' }} />
-          <Stack.Screen name="Uretim" component={UretimScreen} options={{ title: 'Üretim Fişi' }} />
-          <Stack.Screen name="UretimDetay" component={UretimDetayScreen} options={{ title: 'Üretim Detayı' }} />
-          <Stack.Screen name="UretimEkBilgiler" component={UretimEkBilgilerScreen} options={{ title: 'Üretim Ek Bilgiler' }} />
-          <Stack.Screen name="Fason" component={FasonScreen} options={{ title: 'Fason Fişi' }} />
-          <Stack.Screen name="FasonDetay" component={FasonDetayScreen} options={{ title: 'Fason Detayı' }} />
-          <Stack.Screen name="FasonEkBilgiler" component={FasonEkBilgilerScreen} options={{ title: 'Fason Ek Bilgiler' }} />
-          <Stack.Screen name="DepoSayim" component={DepoSayimScreen} options={{ title: 'Depo Sayımı' }} />
-          <Stack.Screen name="DepoSayimArama" component={DepoSayimAramaScreen} options={{ title: 'Depo Sayım Arama' }} />
-          <Stack.Screen name="DepoSayimDetay" component={DepoSayimDetayScreen} options={{ title: 'Depo Sayım Detayı' }} />
-          <Stack.Screen name="AdresTransferBarcode" component={AdresTransferBarcodeScreen} options={{ title: 'Adres Transfer' }} />
-          <Stack.Screen name="AdresSec" component={AdresSecScreen} options={{ title: 'Adres Seç' }} />
-          <Stack.Screen name="MiktarGir" component={MiktarGirScreen} options={{ title: 'Miktar Gir' }} />
-          <Stack.Screen name="AdresOkut" component={AdresOkutScreen} options={{ title: 'Adres Okut' }} />
-          <Stack.Screen name="QrScanner" component={QrScanner} options={{ title: 'QR Okuyucu' }} />
-          <Stack.Screen name="PaketListesi" component={PaketListesiScreen} options={{ title: 'Paket Listesi' }} />
-          <Stack.Screen name="Konsinye" component={KonsinyeScreen} options={{ title: 'Konsinye' }} />
-          <Stack.Screen name="Rezerv" component={RezervScreen} options={{ title: 'Rezerv' }} />
-        </Stack.Navigator>
-      </NavigationContainer>
-    </QrProvider>
+  useEffect(() => {
+    const checkLogin = async () => {
+      const token = await AsyncStorage.getItem('token');
+      setIsLoggedIn(!!token);
+      setLoading(false);
+    };
+    checkLogin();
+  }, []);
+
+  if (loading) {
+    return (
+      <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
+        <ActivityIndicator size="large" color="#FF6B00" />
+      </View>
+    );
+  }
+
+  return (
+    <NavigationContainer>
+      <Stack.Navigator
+        initialRouteName={isLoggedIn ? 'Home' : 'Login'}
+        screenOptions={{ headerShown: false }}
+      >
+        <Stack.Screen name="Login" component={LoginScreen} />
+        <Stack.Screen name="CustomerRegister" component={CustomerRegisterScreen} />
+        <Stack.Screen name="ServiceProviderRegister" component={ServiceProviderRegisterScreen} />
+        <Stack.Screen name="Home" component={HomeScreen} />
+        <Stack.Screen name="MyAppointments" component={MyAppointmentsScreen} />
+        <Stack.Screen name="BusinessDetail" component={BusinessDetailScreen} />
+        <Stack.Screen name="Appointment" component={AppointmentScreen} />
+        <Stack.Screen name="ServiceProviderDashboard" component={ServiceProviderDashboardScreen} />
+        <Stack.Screen name="Services" component={ServicesScreen} />
+        <Stack.Screen name="Staff" component={StaffScreen} />
+        <Stack.Screen name="ProfessionSelect" component={ProfessionSelectScreen} />
+        <Stack.Screen name="BusinessHours" component={BusinessHoursScreen} />
+        <Stack.Screen name="ReviewsList" component={ReviewsListScreen} />
+        <Stack.Screen name="WriteReview" component={WriteReviewScreen} />
+        <Stack.Screen name="StaffHours" component={StaffHoursScreen} />
+      </Stack.Navigator>
+    </NavigationContainer>
   );
 }

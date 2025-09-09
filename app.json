@@ -1,8 +1,8 @@
 {
   "expo": {
-    "name": "cloud-expo",
-    "slug": "cloud-expo",
-    "version": "0.0.1",
+    "name": "BarberBooking",
+    "slug": "BarberBooking",
+    "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "light",
@@ -18,24 +18,14 @@
     "android": {
       "adaptiveIcon": {
         "foregroundImage": "./assets/adaptive-icon.png",
-        "backgroundColor": "#ffffff"
+        "backgroundColor": "#ffffff",
+        "usesCleartextTraffic": true
       },
       "edgeToEdgeEnabled": true,
-      "permissions": [
-        "android.permission.CAMERA"
-      ],
-      "package": "com.sametunlu.cloudexpo"
+      "package": "com.sametunlu.BarberBooking"
     },
     "web": {
       "favicon": "./assets/favicon.png"
-    },
-    "plugins": [
-      "expo-barcode-scanner"
-    ],
-    "extra": {
-      "eas": {
-        "projectId": "9c743d0b-e7dc-4547-83e0-ca141c7ef5da"
-      }
     }
   }
 }
