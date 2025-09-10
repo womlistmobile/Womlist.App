@@ -9,63 +9,207 @@ import {
   Alert,
 } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
+import { useQr } from '../../DashBoard/QrContext';
 
 export default function FastTransferUrunScreen({ route }: any) {
-  const { selectedDepo } = route.params;
-  const { selectedDepoMevcut } = route.params;
+  const { selectedDepo, selectedDepoMevcut, user } = route.params;
   const navigation = useNavigation<any>();
+  const { scannedValue, setScannedValue } = useQr();
 
   const [activeTab, setActiveTab] = useState<'Genel' | 'Okunan' | 'Kontrol'>('Genel');
-  const [barcode, setBarcode] = useState('');
+  const [lotNo, setLotNo] = useState('');
+  const [miktar, setMiktar] = useState('');
+  const [malzemeBilgisi, setMalzemeBilgisi] = useState<any>(null);
   const [kontrolListesi, setKontrolListesi] = useState<any[]>([]);
   const [gonderilenVeriler, setGonderilenVeriler] = useState<any[]>([]);
+  const [submitting, setSubmitting] = useState(false);
+  const [loading, setLoading] = useState(false);
 
-  const handleNavigate = async () => {
-    if (!barcode.trim()) return;
-
-    try {
-      const response = await fetch(`https://apicloud.womlistapi.com/api/Sorgulama/Malzeme?barkod=${barcode}`);
-      const json = await response.json();
-
-
-      const seciliDepoMiktari = json.depoMiktarlari.find((depoItem: any) => 
-        depoItem.depoAciklamasi.trim() === selectedDepoMevcut.aciklamasi.trim())?.miktar ?? 0;  
-
-      const kontrolVerisi = {
-        kodu: json.kodu,
-        aciklama: json.aciklama,
-        kaynakDepo: selectedDepoMevcut.aciklamasi,
-        hedefDepo: selectedDepo.aciklamasi,
-        miktar: seciliDepoMiktari
-      };
-
-      setKontrolListesi((prev) => [...prev, kontrolVerisi]);
-      setBarcode('');
-      setActiveTab('Kontrol');
-    } catch (err) {
-      Alert.alert('Hata', 'Ürün bilgisi alınamadı.');
+  // QR kod değişikliğini dinle
+  useEffect(() => {
+    if (scannedValue) {
+      setLotNo(scannedValue);
+      setScannedValue('');
     }
+  }, [scannedValue]);
+
+  const handleLotSorgula = async () => {
+    if (!lotNo.trim()) {
+      Alert.alert('Uyarı', 'Lütfen lot numarası giriniz.');
+      return;
+    }
+
+    setLoading(true);
+    try {
+      const response = await fetch(`https://apicloud.womlistapi.com/api/EnvanterSorgulama/LotSorgula?lotNo=${lotNo}&depoId=${selectedDepoMevcut.depoId}`);
+      
+      if (!response.ok) {
+        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+      }
+
+      const responseText = await response.text();
+      
+      if (!responseText.trim()) {
+        throw new Error('API\'den boş yanıt alındı');
+      }
+
+      let json;
+      try {
+        json = JSON.parse(responseText);
+      } catch (parseError) {
+        console.error('JSON Parse Error:', parseError);
+        console.error('Response Text:', responseText);
+        throw new Error('API yanıtı geçersiz JSON formatında');
+      }
+
+      if (!Array.isArray(json) || json.length === 0) {
+        throw new Error('Bu lot numarası için kayıt bulunamadı');
+      }
+
+      // İlk kaydı al (genellikle tek kayıt döner)
+      const lotData = json[0];
+      
+      // Mevcut depodaki miktarı bul
+      const mevcutDepoMiktari = lotData.depoMiktarlari?.find((depoItem: any) => 
+        depoItem.depoAciklamasi?.trim() === selectedDepoMevcut.aciklamasi?.trim()
+      )?.miktar ?? 0;
+
+      if (mevcutDepoMiktari <= 0) {
+        throw new Error('Bu lot numarası seçili depoda bulunmuyor');
+      }
+
+      setMalzemeBilgisi({
+        malzemeId: lotData.malzemeId,
+        malzemeKodu: lotData.malzemeKodu,
+        malzemeAciklama: lotData.malzemeAciklama,
+        lotNo: lotData.lotNo,
+        miktar: mevcutDepoMiktari,
+        birimId: lotData.birimId,
+        birimAciklama: lotData.birimAciklama
+      });
+      
+      setMiktar('');
+    } catch (err) {
+      console.error('Lot sorgulama hatası:', err);
+      Alert.alert('Hata', err instanceof Error ? err.message : 'Lot bilgisi alınamadı.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleMiktarEkle = () => {
+    if (!malzemeBilgisi) {
+      Alert.alert('Uyarı', 'Önce lot numarası sorgulayınız.');
+      return;
+    }
+
+    if (!miktar.trim()) {
+      Alert.alert('Uyarı', 'Lütfen miktar giriniz.');
+      return;
+    }
+
+    const girilenMiktar = parseFloat(miktar);
+    if (isNaN(girilenMiktar) || girilenMiktar <= 0) {
+      Alert.alert('Hata', 'Lütfen geçerli bir miktar giriniz.');
+      return;
+    }
+
+    if (girilenMiktar > malzemeBilgisi.miktar) {
+      Alert.alert('Hata', `Girilen miktar (${girilenMiktar}) mevcut miktarı (${malzemeBilgisi.miktar}) aşamaz!`);
+      return;
+    }
+
+    const kontrolVerisi = {
+      malzemeId: malzemeBilgisi.malzemeId,
+      malzemeKodu: malzemeBilgisi.malzemeKodu,
+      malzemeAciklama: malzemeBilgisi.malzemeAciklama,
+      kaynakDepoId: selectedDepoMevcut.depoId,
+      kaynakDepoAciklama: selectedDepoMevcut.aciklamasi,
+      hedefDepoId: selectedDepo.depoId,
+      hedefDepoAciklama: selectedDepo.aciklamasi,
+      miktar: girilenMiktar,
+      lotNo: lotNo.trim(),
+      birimId: malzemeBilgisi.birimId,
+      birimAciklama: malzemeBilgisi.birimAciklama,
+      terminalId: user?.id || 'MOBILE_TERMINAL',
+      mevcutMiktar: malzemeBilgisi.miktar
+    };
+
+    setKontrolListesi((prev) => [...prev, kontrolVerisi]);
+    setMiktar('');
+    setLotNo('');
+    setMalzemeBilgisi(null);
+    setActiveTab('Kontrol');
   };
 
   const handleKaydet = async () => {
     if (kontrolListesi.length === 0) return;
 
+    setSubmitting(true);
     try {
-      const response = await fetch("https://apicloud.womlistapi.com/api/Transfer/Kaydet", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(kontrolListesi),
+      // Her ürün için ayrı stok hareketi oluştur
+      const stokHareketleri = kontrolListesi.map((item) => ({
+        kod: `TRANSFER_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+        tarih: new Date().toISOString().split('T')[0],
+        beyannameKod: "",
+        beyannameTarih: "",
+        stokFisTuru: 1,
+        kaynakDepoId: item.kaynakDepoId,
+        kullaniciTerminalId: item.terminalId,
+        destinasyonDepoId: item.hedefDepoId,
+        satirlar: [{
+          depoId: item.kaynakDepoId,
+          adresId: "",
+          stokId: item.malzemeId,
+          sayimHareketId: "",
+          sabitFisHareketleriId: "",
+          transferHareketId: "",
+          malzemeTemelBilgiId: item.malzemeId,
+          kullaniciTerminalId: item.terminalId,
+          birimId: item.birimId,
+          carpan1: 0,
+          carpan2: 0,
+          lotNo: item.lotNo || "",
+          miktar: item.miktar,
+          girisCikisTuru: 1
+        }]
+      }));
+
+      // Her stok hareketini ayrı ayrı gönder
+      const promises = stokHareketleri.map(async (hareket) => {
+        const response = await fetch("https://apicloud.womlistapi.com/api/Stok/StokHareketEkle", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(hareket),
+        });
+
+        if (!response.ok) {
+          const errorText = await response.text();
+          let errorMessage = "Stok hareketi kaydedilemedi.";
+          
+          try {
+            const errorJson = JSON.parse(errorText);
+            errorMessage = errorJson.message || errorMessage;
+          } catch {
+            // JSON parse edilemezse raw text kullan
+          }
+          
+          throw new Error(`${hareket.kod}: ${errorMessage}`);
+        }
+
+        return await response.json();
       });
 
-      if (response.ok) {
-        setGonderilenVeriler((prev) => [...prev, ...kontrolListesi]);
-        setKontrolListesi([]);
-        Alert.alert("Başarılı", "Veriler kaydedildi.");
-      } else {
-        Alert.alert("Hata", "Veriler kaydedilemedi.");
-      }
+      await Promise.all(promises);
+      
+      setGonderilenVeriler((prev) => [...prev, ...kontrolListesi]);
+      setKontrolListesi([]);
+      Alert.alert("✅ Başarılı", "Transfer işlemi başarıyla kaydedildi.");
     } catch (err) {
-      Alert.alert("Sunucu Hatası", "Veriler gönderilemedi.");
+      console.error('Transfer kaydetme hatası:', err);
+      Alert.alert("❌ Hata", err instanceof Error ? err.message : "Transfer kaydedilemedi.");
+    } finally {
+      setSubmitting(false);
     }
   };
 
@@ -80,18 +224,50 @@ export default function FastTransferUrunScreen({ route }: any) {
     <View style={styles.okunanContainer}>
       <TextInput
         style={styles.input}
-        placeholder="Ürün Barkodu Giriniz"
-        value={barcode}
-        onChangeText={setBarcode}
+        placeholder="Lot Numarası Giriniz"
+        value={lotNo}
+        onChangeText={setLotNo}
       />
+      
       <View style={styles.iconRow}>
-        <TouchableOpacity style={styles.iconButton} onPress={handleNavigate}>
-          <Text style={styles.iconText}>▶️</Text>
+        <TouchableOpacity 
+          style={[styles.iconButton, loading && styles.iconButtonDisabled]} 
+          onPress={handleLotSorgula}
+          disabled={loading}
+        >
+          <Text style={styles.iconText}>
+            {loading ? '⏳' : '🔍'}
+          </Text>
         </TouchableOpacity>
-        <TouchableOpacity style={styles.iconButton}>
+        <TouchableOpacity 
+          style={styles.iconButton}
+          onPress={() => navigation.navigate('QrScanner')}
+        >
           <Text style={styles.iconText}>📷</Text>
         </TouchableOpacity>
       </View>
+
+      {malzemeBilgisi && (
+        <View style={styles.malzemeCard}>
+          <Text style={styles.malzemeTitle}>Malzeme Bilgisi</Text>
+          <Text style={styles.malzemeText}><Text style={styles.bold}>Kod:</Text> {malzemeBilgisi.malzemeKodu}</Text>
+          <Text style={styles.malzemeText}><Text style={styles.bold}>Açıklama:</Text> {malzemeBilgisi.malzemeAciklama}</Text>
+          <Text style={styles.malzemeText}><Text style={styles.bold}>Mevcut Miktar:</Text> {malzemeBilgisi.miktar} {malzemeBilgisi.birimAciklama}</Text>
+          <Text style={styles.malzemeText}><Text style={styles.bold}>Lot No:</Text> {malzemeBilgisi.lotNo}</Text>
+          
+          <TextInput
+            style={styles.input}
+            placeholder="Transfer Miktarı Giriniz"
+            value={miktar}
+            onChangeText={setMiktar}
+            keyboardType="numeric"
+          />
+          
+          <TouchableOpacity style={styles.ekleButton} onPress={handleMiktarEkle}>
+            <Text style={styles.ekleButtonText}>➕ Listeye Ekle</Text>
+          </TouchableOpacity>
+        </View>
+      )}
     </View>
   );
 
@@ -103,20 +279,28 @@ export default function FastTransferUrunScreen({ route }: any) {
         <Text style={styles.kontrolCellBold}>Kaynak</Text>
         <Text style={styles.kontrolCellBold}>Hedef</Text>
         <Text style={styles.kontrolCellBold}>Miktar</Text>
+        <Text style={styles.kontrolCellBold}>Lot</Text>
       </View>
       {kontrolListesi.map((item, index) => (
         <View key={index} style={styles.kontrolRow}>
-          <Text style={styles.kontrolCell}>{item.kodu}</Text>
-          <Text style={styles.kontrolCell}>{item.aciklama}</Text>
-          <Text style={styles.kontrolCell}>{item.kaynakDepo}</Text>
-          <Text style={styles.kontrolCell}>{item.hedefDepo}</Text>
+          <Text style={styles.kontrolCell}>{item.malzemeKodu}</Text>
+          <Text style={styles.kontrolCell}>{item.malzemeAciklama}</Text>
+          <Text style={styles.kontrolCell}>{item.kaynakDepoAciklama}</Text>
+          <Text style={styles.kontrolCell}>{item.hedefDepoAciklama}</Text>
           <Text style={styles.kontrolCell}>{item.miktar}</Text>
+          <Text style={styles.kontrolCell}>{item.lotNo || '-'}</Text>
         </View>
       ))}
 
       {kontrolListesi.length > 0 && (
-        <TouchableOpacity style={styles.kaydetButton} onPress={handleKaydet}>
-          <Text style={styles.kaydetText}>💾 Kaydet</Text>
+        <TouchableOpacity 
+          style={[styles.kaydetButton, submitting && styles.kaydetButtonDisabled]} 
+          onPress={handleKaydet}
+          disabled={submitting}
+        >
+          <Text style={styles.kaydetText}>
+            {submitting ? '⏳ Kaydediliyor...' : '💾 Kaydet'}
+          </Text>
         </TouchableOpacity>
       )}
 
@@ -125,11 +309,12 @@ export default function FastTransferUrunScreen({ route }: any) {
           <Text style={{ fontWeight: 'bold', marginTop: 20, fontSize: 16 }}>Gönderilenler:</Text>
           {gonderilenVeriler.map((item, i) => (
             <View key={i} style={styles.kontrolRow}>
-              <Text style={styles.kontrolCell}>{item.kodu}</Text>
-              <Text style={styles.kontrolCell}>{item.aciklama}</Text>
-              <Text style={styles.kontrolCell}>{item.kaynakDepo}</Text>
-              <Text style={styles.kontrolCell}>{item.hedefDepo}</Text>
+              <Text style={styles.kontrolCell}>{item.malzemeKodu}</Text>
+              <Text style={styles.kontrolCell}>{item.malzemeAciklama}</Text>
+              <Text style={styles.kontrolCell}>{item.kaynakDepoAciklama}</Text>
+              <Text style={styles.kontrolCell}>{item.hedefDepoAciklama}</Text>
               <Text style={styles.kontrolCell}>{item.miktar}</Text>
+              <Text style={styles.kontrolCell}>{item.lotNo || '-'}</Text>
             </View>
           ))}
         </>
@@ -215,7 +400,44 @@ const styles = StyleSheet.create({
     backgroundColor: '#2ecc71',
     padding: 12, borderRadius: 8, marginTop: 16, alignItems: 'center',
   },
+  kaydetButtonDisabled: {
+    backgroundColor: '#95a5a6',
+  },
   kaydetText: {
     color: 'white', fontSize: 16, fontWeight: 'bold',
+  },
+  iconButtonDisabled: {
+    backgroundColor: '#95a5a6',
+  },
+  malzemeCard: {
+    backgroundColor: 'white',
+    margin: 16,
+    padding: 16,
+    borderRadius: 12,
+    elevation: 4,
+    marginTop: 20,
+  },
+  malzemeTitle: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    marginBottom: 12,
+    color: '#2c3e50',
+  },
+  malzemeText: {
+    fontSize: 14,
+    marginBottom: 8,
+    color: '#34495e',
+  },
+  ekleButton: {
+    backgroundColor: '#27ae60',
+    padding: 12,
+    borderRadius: 8,
+    marginTop: 12,
+    alignItems: 'center',
+  },
+  ekleButtonText: {
+    color: 'white',
+    fontSize: 16,
+    fontWeight: 'bold',
   },
 });

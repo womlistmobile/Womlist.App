@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View,
   Text,
@@ -6,6 +6,7 @@ import {
   TouchableOpacity,
   StyleSheet,
   Alert,
+  ActivityIndicator,
 } from 'react-native';
 import { useNavigation, useRoute } from '@react-navigation/native';
 
@@ -13,47 +14,95 @@ export default function EkBilgilerScreen() {
   const navigation = useNavigation<any>();
   const route = useRoute<any>();
 
-  const { selectedItems, fisId, depoId,userId, girisCikisTuru  } = route.params;
+  const { selectedItems, fisId, depoId, userId, girisCikisTuru, onTransferComplete, onTransferStart } = route.params;
   const [kod, setKod] = useState('');
   const [date] = useState(
     new Date().toLocaleDateString('tr-TR').replace(/\./g, '-')
   );
+  const [isLoading, setIsLoading] = useState(false);
+  const [isGeneratingCode, setIsGeneratingCode] = useState(false);
+
+  // Sayfa yüklendiğinde otomatik kod oluştur
+  useEffect(() => {
+    generateCode();
+  }, []);
+
+  const generateCode = async () => {
+    if (isGeneratingCode) return;
+    
+    setIsGeneratingCode(true);
+    try {
+      const response = await fetch(`https://apicloud.womlistapi.com/api/Stok/KotlinYeniKod/${girisCikisTuru}`, {
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      });
+
+      if (response.ok) {
+        const result = await response.json();
+        if (result.durum && result.message) {
+          setKod(result.message);
+        } else {
+          console.error('Kod oluşturma hatası:', result.message);
+          Alert.alert('Uyarı', 'Otomatik kod oluşturulamadı. Manuel olarak girebilirsiniz.');
+        }
+      } else {
+        console.error('Kod oluşturma API hatası:', response.status);
+        Alert.alert('Uyarı', 'Otomatik kod oluşturulamadı. Manuel olarak girebilirsiniz.');
+      }
+    } catch (error) {
+      console.error('Kod oluşturma hatası:', error);
+      Alert.alert('Uyarı', 'Otomatik kod oluşturulamadı. Manuel olarak girebilirsiniz.');
+    } finally {
+      setIsGeneratingCode(false);
+    }
+  };
 
   const handleGonder = async () => {
-    if (!kod) {
-      // Alert.alert('Hata', 'Lütfen kod giriniz.');
+    if (isLoading) {
+      Alert.alert('Bilgi', 'Veri transferi devam ediyor, lütfen bekleyiniz.');
       return;
     }
+
+    if (!kod.trim()) {
+      Alert.alert('Hata', 'Lütfen kod giriniz.');
+      return;
+    }
+
+    setIsLoading(true);
+    if (onTransferStart) onTransferStart();
   
     const requestBody = {
-      kod: kod,
+      kod: kod.trim(),
       tarih: date,
       beyannameKod: '',
-      beyannameTarih: '',
-      stokFisTuru: 1,
+      beyannameTarih: 'Dummy Data',
+      stokFisTuru: 3, // SabitFis için 3 kullanılıyor
       kaynakDepoId: depoId,
       kullaniciTerminalId: userId,
-      karsidakiDepoId: '',
+      destinasyonDepoId: null,
       satirlar: selectedItems.map((item: any) => ({
         depoId: item.depoId,
-        adresId: '',
-        stokId: '',
-        sayimHareketId: '',
-        sabitFisHareketId: item.satirId,
-        transferHareketId: '',
-        malzemeTemelBilgiId: item.malzemeId || '',
+        adresId: null,
+        stokId: null,
+        sayinHareketId: null,
+        sabitFisHareketleriId: item.satirId,
+        transferHareketId: null,
+        malzemeTemelBilgiId: item.malzemeTemelBilgiId || item.malzemeId,
         kullaniciTerminalId: userId,
-        birimId: item.birimId,
+        birinId: item.birimId,
         carpan1: item.carpan1 || 1,
         carpan2: item.carpan2 || 1,
-        lotNo: '',
+        lotNo: item.lotNo || null,
         miktar: item.okutulanMiktar,
         girisCikisTuru: girisCikisTuru,
       })),
     }; 
-
-   
+  
     try {
+      console.log('Gönderilen veri:', JSON.stringify(requestBody, null, 2));
+      
       const response = await fetch(
         'https://apicloud.womlistapi.com/api/Stok/StokHareketEkle',
         {
@@ -64,22 +113,37 @@ export default function EkBilgilerScreen() {
       );
   
       const rawText = await response.text();
+      console.log('API Yanıtı:', rawText);
   
-       if (!rawText) {
-         throw new Error('Sunucu boş cevap döndü.');
-       }
+      if (!rawText) {
+        throw new Error('Sunucu boş cevap döndü.');
+      }
   
       const result = JSON.parse(rawText);
   
       if (result.durum) {
-         Alert.alert('Başarılı', result.message || 'Veriler başarıyla gönderildi.');
+        Alert.alert('✅ Başarılı', result.message || 'Veriler başarıyla gönderildi.');
+        if (onTransferComplete) onTransferComplete();
         navigation.goBack();
       } else {
-         Alert.alert('Hata', result.message || 'Veri gönderme başarısız.');
+        // Stok yetersizliği gibi özel hata mesajları
+        let errorMessage = result.message || 'Veri gönderme başarısız.';
+        
+        if (errorMessage.includes('Stok yetersiz')) {
+          errorMessage = `⚠️ Stok Yetersiz!\n\n${errorMessage}`;
+        } else if (errorMessage.includes('Malzeme')) {
+          errorMessage = `📦 Malzeme Hatası!\n\n${errorMessage}`;
+        } else {
+          errorMessage = `❌ Hata!\n\n${errorMessage}`;
+        }
+        
+        Alert.alert('Hata', errorMessage);
       }
     } catch (error: any) {
       console.error('Veri gönderim hatası:', error.message);
-       Alert.alert('Hata', 'Veriler gönderilemedi: ' + error.message);
+      Alert.alert('❌ Hata', `Veriler gönderilemedi:\n\n${error.message}`);
+    } finally {
+      setIsLoading(false);
     }
   };
   
@@ -92,14 +156,26 @@ export default function EkBilgilerScreen() {
       </TouchableOpacity>
 
       <TextInput
-        placeholder="KOD"
+        placeholder={isGeneratingCode ? "Kod oluşturuluyor..." : "KOD"}
         value={kod}
         onChangeText={setKod}
-        style={styles.input}
+        style={[styles.input, isGeneratingCode && styles.generatingInput]}
+        editable={!isGeneratingCode}
       />
 
-      <TouchableOpacity style={styles.button} onPress={handleGonder}>
-        <Text style={styles.buttonText}>➤ VERİLERİ GÖNDER</Text>
+      <TouchableOpacity 
+        style={[styles.button, isLoading && styles.disabledButton]} 
+        onPress={handleGonder}
+        disabled={isLoading}
+      >
+        {isLoading ? (
+          <View style={styles.loadingContainer}>
+            <ActivityIndicator size="small" color="#fff" />
+            <Text style={styles.buttonText}>GÖNDERİLİYOR...</Text>
+          </View>
+        ) : (
+          <Text style={styles.buttonText}>➤ VERİLERİ GÖNDER</Text>
+        )}
       </TouchableOpacity>
     </View>
   );
@@ -130,4 +206,10 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   buttonText: { color: '#fff', fontSize: 16, fontWeight: 'bold' },
+  disabledButton: { backgroundColor: '#bdc3c7' },
+  loadingContainer: { flexDirection: 'row', alignItems: 'center', gap: 8 },
+  generatingInput: {
+    backgroundColor: '#f8f9fa',
+    color: '#6c757d',
+  },
 });

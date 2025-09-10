@@ -80,12 +80,12 @@ export default function MainMenuScreen({ route, navigation }: any) {
     {
       label: 'Konsinye',
       screen: 'Konsinye',
-      extraParams: {},
+      extraParams: { selectedDepo, user },
     },
     {
       label: 'Rezerv',
       screen: 'Rezerv',
-      extraParams: {},
+      extraParams: { selectedDepo, user },
     },
   ];
 
