@@ -1,7 +1,7 @@
 {
   "expo": {
-    "name": "womlist",
-    "slug": "womlist",
+    "name": "WomList",
+    "slug": "cloud-expo",
     "version": "0.0.1",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
@@ -20,7 +20,9 @@
         "backgroundColor": "#ffffff"
       },
       "package": "com.sametunlu.womlist",
-      "label": "womlist"
+      "permissions": [
+        "android.permission.CAMERA"
+      ]
     },
     "web": {
       "favicon": "./assets/favicon.png"
@@ -33,6 +35,7 @@
       "eas": {
         "projectId": "9c743d0b-e7dc-4547-83e0-ca141c7ef5da"
       }
-    }
+    },
+    "owner": "sametunlu"
   }
 }

@@ -1,4 +1,6 @@
-import React, { useEffect } from 'react';
+
+
+import { useEffect } from 'react';
 import { View, Text, ActivityIndicator, StyleSheet, Alert } from 'react-native';
 
 export default function LoadingScreen({ route, navigation }: any) {
