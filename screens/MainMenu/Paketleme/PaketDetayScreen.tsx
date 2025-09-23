@@ -78,6 +78,7 @@ export default function PaketDetayScreen() {
     fetchPaketSatirlari();
   };
 
+
   const getProgressPercentage = (paketlenen: number, paketlenecek: number) => {
     if (paketlenecek === 0) return 0;
     return Math.round((paketlenen / paketlenecek) * 100);
@@ -93,6 +94,7 @@ export default function PaketDetayScreen() {
     navigation.navigate('PaketlemeDetay', {
       selectedDepo,
       user,
+      paketId: paketId,
       paketSatirId: item.paketSatirId,
       malzemeKodu: item.malzemekodu,
       malzemeAciklama: item.malzemeAciklamasi,
@@ -190,6 +192,7 @@ export default function PaketDetayScreen() {
           }
         />
       )}
+
     </View>
   );
 }

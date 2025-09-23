@@ -27,6 +27,7 @@ export default function KonsinyeIslemKayitlariScreen({ route, navigation }: any)
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [barcodeInput, setBarcodeInput] = useState('');
+  const [lotInput, setLotInput] = useState('');
   const [miktarInput, setMiktarInput] = useState('');
   const [submitting, setSubmitting] = useState(false);
   const [deletingId, setDeletingId] = useState<string | null>(null);
@@ -43,7 +44,7 @@ export default function KonsinyeIslemKayitlariScreen({ route, navigation }: any)
     fetchIslemKayitlari();
   }, []);
 
-  // QR kod tarandığında input'a yerleştir
+  // QR kod tarandığında barkod input'una yerleştir
   useFocusEffect(
     React.useCallback(() => {
       if (scannedValue) {
@@ -119,7 +120,12 @@ export default function KonsinyeIslemKayitlariScreen({ route, navigation }: any)
   const handleKonsinyeEkle = async () => {
     // Validasyonlar
     if (!barcodeInput.trim()) {
-      Alert.alert('❌ Eksik Bilgi', 'Lütfen lot veya barkod numarasını giriniz.');
+      Alert.alert('❌ Eksik Bilgi', 'Lütfen barkod numarasını giriniz.');
+      return;
+    }
+
+    if (satirData?.malzemeLotluMu && !lotInput.trim()) {
+      Alert.alert('❌ Eksik Bilgi', 'Bu ürün lotlu olduğu için lot numarası gereklidir.');
       return;
     }
 
@@ -139,10 +145,15 @@ export default function KonsinyeIslemKayitlariScreen({ route, navigation }: any)
       
       const requestBody = {
         konsinyeSatirId: konsinyeSatirId,
-        kod: barcodeInput.trim(),
+        kod: barcodeInput.trim(), // Her zaman barkod sorgulanacak
         miktar: miktar,
-        terminalId: user?.id || 'MOBILE_TERMINAL'
+        terminalId: user?.id || 'MOBILE_TERMINAL',
+        lotNo: satirData?.malzemeLotluMu ? lotInput.trim() : null // Lotlu ürünler için lot numarası
       };
+
+      console.log('🔍 Konsinye API Request Body:', requestBody);
+      console.log('🔍 Satır Data:', satirData);
+      console.log('🔍 Malzeme Lotlu Mu:', satirData?.malzemeLotluMu);
 
       const response = await fetch(
         'https://apicloud.womlistapi.com/api/Konsinye/GonderimIslemSatiriEkle',
@@ -157,6 +168,8 @@ export default function KonsinyeIslemKayitlariScreen({ route, navigation }: any)
 
       if (!response.ok) {
         const errorText = await response.text();
+        console.log('❌ API Error Response:', errorText);
+        console.log('❌ Response Status:', response.status);
         const userFriendlyMessage = parseApiError(errorText, response.status);
         Alert.alert('❌ İşlem Başarısız', userFriendlyMessage, [
           { text: 'Tamam', style: 'default' }
@@ -173,6 +186,7 @@ export default function KonsinyeIslemKayitlariScreen({ route, navigation }: any)
         
         // Input'ları temizle
         setBarcodeInput('');
+        setLotInput('');
         setMiktarInput('');
         
         // Listeyi yenile
@@ -306,10 +320,11 @@ export default function KonsinyeIslemKayitlariScreen({ route, navigation }: any)
       <View style={styles.inputCard}>
         <Text style={styles.inputTitle}>Yeni Konsinye İşlemi Ekle</Text>
         
+        {/* Barkod Input - Her zaman göster */}
         <View style={styles.inputContainer}>
           <TextInput
             style={styles.barcodeInput}
-            placeholder="Lot veya Barkod numarasını giriniz"
+            placeholder="Barkod numarasını giriniz"
             value={barcodeInput}
             onChangeText={setBarcodeInput}
           />
@@ -320,6 +335,24 @@ export default function KonsinyeIslemKayitlariScreen({ route, navigation }: any)
             <MaterialCommunityIcons name="camera" size={24} color="#ea5a21" />
           </TouchableOpacity>
         </View>
+
+        {/* Lot Input - Sadece lotlu ürünler için göster */}
+        {satirData?.malzemeLotluMu && (
+          <View style={styles.inputContainer}>
+            <TextInput
+              style={styles.barcodeInput}
+              placeholder="Lot numarasını giriniz"
+              value={lotInput}
+              onChangeText={setLotInput}
+            />
+            <TouchableOpacity
+              style={styles.cameraButton}
+              onPress={() => navigation.navigate('QrScanner')}
+            >
+              <MaterialCommunityIcons name="camera" size={24} color="#ea5a21" />
+            </TouchableOpacity>
+          </View>
+        )}
         
         <View style={styles.miktarContainer}>
           <TextInput

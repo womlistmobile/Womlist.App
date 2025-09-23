@@ -96,6 +96,7 @@ export default function EkBilgilerScreen() {
         carpan2: item.carpan2 || 1,
         lotNo: item.lotNo || null,
         miktar: item.okutulanMiktar,
+        sonkullanmaTarihi: item.sonKullanmaTarihi || null,
         girisCikisTuru: girisCikisTuru,
       })),
     }; 

@@ -1,7 +1,7 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
 // Centralized API configuration
-export const API_BASE = 'http://192.168.1.15:45472/api';
+export const API_BASE = 'https://apicloud.womlistapi.com/api';
 
 // Helper to create headers with authorization
 export const makeHeaders = async () => {

@@ -1,4 +1,5 @@
 import { useEffect } from 'react';
+import { BackHandler, Alert } from 'react-native';
 import { NavigationContainer } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { QrProvider } from './screens/DashBoard/QrContext';
@@ -62,6 +63,16 @@ import RezerveIslemKayitlariScreen from './screens/MainMenu/RezerveIslemKayitlar
 const Stack = createNativeStackNavigator();
 
 export default function App() {
+  useEffect(() => {
+    const backHandler = BackHandler.addEventListener('hardwareBackPress', () => {
+      // Geri tuşu basıldığında uygulamayı kapatma
+      // Navigation otomatik olarak önceki sayfaya gidecek
+      return false; // Default davranışı devam ettir
+    });
+
+    return () => backHandler.remove();
+  }, []);
+
   return (
     <QrProvider>
       <NavigationContainer>

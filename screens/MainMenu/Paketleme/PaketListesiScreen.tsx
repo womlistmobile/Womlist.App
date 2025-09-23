@@ -9,6 +9,7 @@ import {
   Alert,
 } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
+import { MaterialCommunityIcons } from '@expo/vector-icons';
 
 type Paket = {
   paketId: string;
@@ -30,6 +31,16 @@ export default function PaketListesiScreen({ route }: any) {
       headerStyle: { backgroundColor: '#ea5a21' },
       headerTintColor: '#fff',
       headerTitleAlign: 'center',
+      headerRight: () => (
+        <TouchableOpacity
+          style={styles.headerButton}
+          onPress={() => {
+            Alert.alert('Yeni Paket', 'Yeni paket ekleme özelliği yakında eklenecek!');
+          }}
+        >
+          <MaterialCommunityIcons name="plus" size={24} color="#fff" />
+        </TouchableOpacity>
+      ),
     });
   }, []);
 
@@ -117,6 +128,12 @@ const styles = StyleSheet.create({
     flex: 1,
     padding: 16,
     backgroundColor: '#f3edea',
+  },
+  headerButton: {
+    marginRight: 8,
+    padding: 8,
+    borderRadius: 20,
+    backgroundColor: 'rgba(255, 255, 255, 0.2)',
   },
   card: {
     backgroundColor: '#fff',
