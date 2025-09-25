@@ -103,7 +103,7 @@ export default function EkBilgilerScreen() {
           carpan2: item.carpan2 || 1,
           lotNo: item.lotNo || null,
           miktar: item.okutulanMiktar,
-          sonkullanmaTarihi: item.sonKullanmaTarihi || null,
+          sonKullanmaTarihi: item.sonKullanmaTarihi || null, // SktTarihi yerine sonKullanmaTarihi
           girisCikisTuru: girisCikisTuru,
           // Duplicate key hatasını önlemek için unique identifier ekle
           uniqueId: `${item.satirId}_${uniqueTimestamp}_${index}`,
