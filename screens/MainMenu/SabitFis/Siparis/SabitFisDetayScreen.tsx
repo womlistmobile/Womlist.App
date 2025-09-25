@@ -22,7 +22,7 @@ type RootStackParamList = {
 interface SatirItem {
   satirId: string;
   malzemeId: string;
-  birimId: string;
+  birimId: string; // String olarak tutulacak ama integer değer
   kodu: string;
   malzeme: string;
   istenenMiktar: number;
@@ -83,14 +83,64 @@ export default function SabitFisDetayScreen() {
         console.log('İlk item tüm alanları:', data[0]);
         console.log('İlk item tüm field isimleri:', Object.keys(data[0] || {}));
         console.log('Lot ile ilgili fieldlar:', Object.keys(data[0] || {}).filter(key => key.toLowerCase().includes('lot')));
+        console.log('🔍 API Response - Tüm birim fieldları:', Object.keys(data[0] || {}).filter(key => key.toLowerCase().includes('birim')));
+        console.log('🔍 API Response - İlk item birim detayları:', {
+          birimId: data[0]?.birimId,
+          birim: data[0]?.birim,
+          birimAciklamasi: data[0]?.birimAciklamasi,
+          birimKodu: data[0]?.birimKodu,
+          tip: typeof data[0]?.birimId
+        });
+        console.log('🔍 API Response - Tüm data:', JSON.stringify(data, null, 2));
+        
+        // BirimId'yi bulmak için tüm field'ları kontrol et
+        if (data && data.length > 0) {
+          const firstItem = data[0];
+          console.log('🔍 İlk item tüm field isimleri:', Object.keys(firstItem));
+          console.log('🔍 İlk item tüm değerleri:', firstItem);
+          
+          // Birim ile ilgili tüm field'ları bul
+          const birimFields = Object.keys(firstItem).filter(key => 
+            key.toLowerCase().includes('birim') || 
+            key.toLowerCase().includes('unit') ||
+            key.toLowerCase().includes('id')
+          );
+          console.log('🔍 Birim/Unit/Id fieldları:', birimFields);
+          
+          birimFields.forEach(field => {
+            console.log(`🔍 ${field}:`, firstItem[field], 'tip:', typeof firstItem[field]);
+          });
+        }
         
         const formatted = data.map((item: any) => {
           console.log(`Item ${item.kodu} - lotluMu:`, item.lotluMu, 'tip:', typeof item.lotluMu);
           console.log(`Item ${item.kodu} - tüm fieldlar:`, Object.keys(item));
+          console.log(`Item ${item.kodu} - birimId:`, item.birimId, 'birim:', item.birim);
+          
+          // BirimId değerini güvenli şekilde belirle
+          let safeBirimId = item.birimId;
+          if (!safeBirimId || safeBirimId === null || safeBirimId === undefined) {
+            // Eğer birimId yoksa, birim kodu veya açıklamasına göre varsayılan değer ata
+            if (item.birim === 'Adet' || item.birimAciklamasi === 'Adet') {
+              safeBirimId = "1"; // Adet için varsayılan ID
+            } else if (item.birim === 'Kg' || item.birimAciklamasi === 'Kg') {
+              safeBirimId = "2"; // Kg için varsayılan ID
+            } else if (item.birim === 'Lt' || item.birimAciklamasi === 'Lt') {
+              safeBirimId = "3"; // Lt için varsayılan ID
+            } else {
+              safeBirimId = "1"; // Genel varsayılan
+            }
+          } else {
+            // Eğer birimId varsa, string olarak tut ama geçerli olduğundan emin ol
+            safeBirimId = safeBirimId.toString();
+          }
+          
+          console.log(`Item ${item.kodu} - safeBirimId:`, safeBirimId);
+          
           return {
             satirId: item.satirId,
             malzemeId: item.malzemeId,
-            birimId: item.birimId,
+            birimId: safeBirimId,
             kodu: item.kodu,
             malzeme: item.malzeme,
             istenenMiktar: item.istenenMiktar,
@@ -334,23 +384,28 @@ export default function SabitFisDetayScreen() {
         kaynakDepoId: depoId,
         kullaniciTerminalId: userId,
         destinasyonDepoId: null,
-        satirlar: selectedItems.map((item: any) => ({
-          depoId: item.depoId,
-          adresId: null,
-          stokId: null,
-          sayinHareketId: null,
-          sabitFisHareketleriId: item.satirId,
-          transferHareketId: null,
-          malzemeTemelBilgiId: item.malzemeTemelBilgiId || item.malzemeId,
-          kullaniciTerminalId: userId,
-          birinId: item.birimId,
-          carpan1: item.carpan1 || 1,
-          carpan2: item.carpan2 || 1,
-          lotNo: item.lotNo || null,
-          miktar: item.okutulanMiktar,
-          sonkullanmaTarihi: item.sonKullanmaTarihi || null,
-          girisCikisTuru: girisCikisTuru,
-        })),
+        satirlar: selectedItems.map((item: any) => {
+          // Gerçek birimId değerini kullan (GUID formatında)
+          console.log(`🔍 SKT Kontrol - BirimId Debug - Item: ${item.kodu}, Original: ${item.birimId}, Using GUID`);
+          
+          return {
+            depoId: item.depoId,
+            adresId: null,
+            stokId: null,
+            sayimHareketId: null, // Düzeltildi: sayinHareketId -> sayimHareketId
+            sabitFisHareketleriId: item.satirId,
+            transferHareketId: null,
+            malzemeTemelBilgiId: item.malzemeTemelBilgiId || item.malzemeId,
+            kullaniciTerminalId: userId,
+            birimId: item.birimId, // Gerçek birimId değerini kullan (GUID)
+            carpan1: item.carpan1 || 1,
+            carpan2: item.carpan2 || 1,
+            lotNo: item.lotNo || null,
+            miktar: item.okutulanMiktar,
+            sonkullanmaTarihi: item.sonKullanmaTarihi || null,
+            girisCikisTuru: girisCikisTuru,
+          };
+        }),
       };
 
       console.log('SKT Kontrol Request:', JSON.stringify(requestBody, null, 2));

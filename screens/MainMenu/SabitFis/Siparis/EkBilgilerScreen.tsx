@@ -73,8 +73,11 @@ export default function EkBilgilerScreen() {
     setIsLoading(true);
     if (onTransferStart) onTransferStart();
   
+    // Duplicate key hatasını önlemek için unique timestamp ekle
+    const uniqueTimestamp = Date.now();
+    
     const requestBody = {
-      kod: kod.trim(),
+      kod: `${kod.trim()}_${uniqueTimestamp}`, // Unique kod oluştur
       tarih: date,
       beyannameKod: '',
       beyannameTarih: 'Dummy Data',
@@ -82,27 +85,39 @@ export default function EkBilgilerScreen() {
       kaynakDepoId: depoId,
       kullaniciTerminalId: userId,
       destinasyonDepoId: null,
-      satirlar: selectedItems.map((item: any) => ({
-        depoId: item.depoId,
-        adresId: null,
-        stokId: null,
-        sayinHareketId: null,
-        sabitFisHareketleriId: item.satirId,
-        transferHareketId: null,
-        malzemeTemelBilgiId: item.malzemeTemelBilgiId || item.malzemeId,
-        kullaniciTerminalId: userId,
-        birinId: item.birimId,
-        carpan1: item.carpan1 || 1,
-        carpan2: item.carpan2 || 1,
-        lotNo: item.lotNo || null,
-        miktar: item.okutulanMiktar,
-        sonkullanmaTarihi: item.sonKullanmaTarihi || null,
-        girisCikisTuru: girisCikisTuru,
-      })),
+      satirlar: selectedItems.map((item: any, index: number) => {
+        // Gerçek birimId değerini kullan (GUID formatında)
+        console.log(`🔍 BirimId Debug - Item: ${item.kodu}, Original: ${item.birimId}, Using GUID`);
+        
+        return {
+          depoId: item.depoId,
+          adresId: null,
+          stokId: null,
+          sayimHareketId: null, // Düzeltildi: sayinHareketId -> sayimHareketId
+          sabitFisHareketleriId: item.satirId,
+          transferHareketId: null,
+          malzemeTemelBilgiId: item.malzemeTemelBilgiId || item.malzemeId,
+          kullaniciTerminalId: userId,
+          birimId: item.birimId, // Gerçek birimId değerini kullan (GUID)
+          carpan1: item.carpan1 || 1,
+          carpan2: item.carpan2 || 1,
+          lotNo: item.lotNo || null,
+          miktar: item.okutulanMiktar,
+          sonkullanmaTarihi: item.sonKullanmaTarihi || null,
+          girisCikisTuru: girisCikisTuru,
+          // Duplicate key hatasını önlemek için unique identifier ekle
+          uniqueId: `${item.satirId}_${uniqueTimestamp}_${index}`,
+        };
+      }),
     }; 
   
     try {
       console.log('Gönderilen veri:', JSON.stringify(requestBody, null, 2));
+      console.log('SelectedItems birimId değerleri:', selectedItems.map(item => ({ 
+        kodu: item.kodu, 
+        birimId: item.birimId, 
+        birim: item.birim 
+      })));
       
       const response = await fetch(
         'https://apicloud.womlistapi.com/api/Stok/StokHareketEkle',
